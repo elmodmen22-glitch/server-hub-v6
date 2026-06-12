@@ -8,7 +8,7 @@ import {
   Plus, X, RotateCcw, RefreshCcw, Trash2, TerminalSquare,
   Maximize2, Minimize2, Play, Square, FileCode,
   ZoomIn, ZoomOut, Keyboard, GitBranch, Terminal as TerminalIcon,
-  FileText, ShieldCheck, Package, Download,
+  FileText, ShieldCheck, Package, Download, Globe,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
@@ -39,15 +39,18 @@ const STORED_SESSION_KEY = "sh_terminal_session";
 const QUICK_CMDS = [
   { label: "clear", icon: Trash2, cmd: "clear\r", color: "#6b7280" },
   { label: "ls -la", icon: FileText, cmd: "ls -la\r", color: "#22c55e" },
-  { label: "htop", icon: TerminalSquare, cmd: "htop\r", color: "#22c55e" },
   { label: "nano", icon: FileText, cmd: "nano ", color: "#22c55e" },
-  { label: "python", icon: FileCode, cmd: "python3\r", color: "#3776ab" },
+  { label: "git clone + run", icon: GitBranch, cmd: "git clone <url> && cd <repo> && npm install && npm start\r", color: "#f05032" },
+  { label: "auto-serve", icon: Globe, cmd: "auto-serve \"python3 -m http.server {PORT}\" 8000\r", color: "#8b5cf6" },
+  { label: "python3", icon: FileCode, cmd: "python3\r", color: "#3776ab" },
   { label: "npm start", icon: TerminalIcon, cmd: "npm start\r", color: "#cb3837" },
   { label: "git clone", icon: GitBranch, cmd: "git clone ", color: "#f05032" },
-  { label: "pip list", icon: FileCode, cmd: "pip list\r", color: "#ff7b72" },
-  { label: "node -v", icon: TerminalIcon, cmd: "node --version\r", color: "#58a6ff" },
+  { label: "pip install -r", icon: FileCode, cmd: "pip install -r requirements.txt\r", color: "#ff7b72" },
+  { label: "node index.js", icon: TerminalIcon, cmd: "node index.js\r", color: "#58a6ff" },
+  { label: "php -S", icon: TerminalIcon, cmd: "auto-serve \"php -S 0.0.0.0:{PORT}\" 8000\r", color: "#8892bf" },
   { label: "cat /etc/os-release", icon: FileText, cmd: "cat /etc/os-release\r", color: "#d29922" },
   { label: "ps aux", icon: TerminalSquare, cmd: "ps aux\r", color: "#bc8cff" },
+  { label: "htop", icon: TerminalSquare, cmd: "htop\r", color: "#22c55e" },
   { label: "curl ifconfig.me", icon: TerminalIcon, cmd: "curl -s ifconfig.me\r", color: "#39c5cf" },
 ];
 
@@ -114,22 +117,39 @@ export default function TerminalPage() {
   const [installCmd, setInstallCmd] = useState("");
 
   const RUN_PRESETS = [
-    { label: "python3 main.py", cmd: "python3 main.py", lang: "py" },
-    { label: "node index.js", cmd: "node index.js", lang: "js" },
-    { label: "npm start", cmd: "npm start", lang: "js" },
-    { label: "python3 app.py", cmd: "python3 app.py", lang: "py" },
-    { label: "php index.php", cmd: "php index.php", lang: "php" },
-    { label: "go run main.go", cmd: "go run main.go", lang: "go" },
-    { label: "bash script.sh", cmd: "bash script.sh", lang: "sh" },
+    { label: "▶ python3 main.py", cmd: "python3 main.py", lang: "py" },
+    { label: "▶ node index.js", cmd: "node index.js", lang: "js" },
+    { label: "▶ npm start", cmd: "npm start", lang: "js" },
+    { label: "▶ python3 app.py", cmd: "python3 app.py", lang: "py" },
+    { label: "▶ php index.php", cmd: "php index.php", lang: "php" },
+    { label: "▶ go run main.go", cmd: "go run main.go", lang: "go" },
+    { label: "▶ bash script.sh", cmd: "bash script.sh", lang: "sh" },
+    { label: "─────────────", cmd: "", lang: "sep" },
+    { label: "🌐 Serve HTTP 8000", cmd: "auto-serve \"python3 -m http.server {PORT}\" 8000", lang: "py" },
+    { label: "🌐 Serve Node.js", cmd: "auto-serve \"node server.js --port {PORT}\" 3000", lang: "js" },
+    { label: "🌐 Serve PHP", cmd: "auto-serve \"php -S 0.0.0.0:{PORT}\" 8000", lang: "php" },
+    { label: "🌐 npm run dev (Vite)", cmd: "auto-serve \"npx vite --port {PORT}\" 5173", lang: "js" },
+    { label: "🌐 npx serve", cmd: "auto-serve \"npx serve -l {PORT}\" 3000", lang: "js" },
+    { label: "─────────────", cmd: "", lang: "sep" },
+    { label: "📦 git clone + install + run", cmd: "git clone <url> && cd <repo> && npm install && npm start", lang: "js" },
+    { label: "📦 git clone + pip install", cmd: "git clone <url> && cd <repo> && pip install -r requirements.txt && python3 main.py", lang: "py" },
+    { label: "📦 git clone + composer", cmd: "git clone <url> && cd <repo> && composer install && php -S 0.0.0.0:8000", lang: "php" },
   ];
 
   const INSTALL_PRESETS = [
     { label: "pip install -r requirements.txt", cmd: "pip install -r requirements.txt", lang: "py" },
     { label: "npm install", cmd: "npm install", lang: "js" },
     { label: "yarn install", cmd: "yarn install", lang: "js" },
+    { label: "pnpm install", cmd: "pnpm install", lang: "js" },
     { label: "go mod tidy", cmd: "go mod tidy", lang: "go" },
     { label: "composer install", cmd: "composer install", lang: "php" },
     { label: "pip install flask", cmd: "pip install flask", lang: "py" },
+    { label: "pip install django", cmd: "pip install django", lang: "py" },
+    { label: "pip install fastapi", cmd: "pip install fastapi uvicorn", lang: "py" },
+    { label: "bundle install (Ruby)", cmd: "bundle install", lang: "ruby" },
+    { label: "gem install rails", cmd: "gem install rails", lang: "ruby" },
+    { label: "cargo build (Rust)", cmd: "cargo build", lang: "rust" },
+    { label: "apt install package", cmd: "apt install <package> -y", lang: "sh" },
   ];
 
   const resources = useRef<Record<string, TabResources>>({});

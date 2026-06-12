@@ -366,6 +366,18 @@ const languages: Language[] = [
         { label: "Merge branch", cmd: "git merge <branch>" },
         { label: "Delete branch", cmd: "git branch -d <branch>" },
       ]},
+      { title: "Clone & Run Project", commands: [
+        { label: "Clone + npm install + start", cmd: "git clone <url> && cd <repo> && npm install && npm start" },
+        { label: "Clone + pip install + run", cmd: "git clone <url> && cd <repo> && pip install -r requirements.txt && python3 main.py" },
+        { label: "Clone + composer + php serve", cmd: "git clone <url> && cd <repo> && composer install && php -S 0.0.0.0:8000" },
+        { label: "Clone + go mod + run", cmd: "git clone <url> && cd <repo> && go mod tidy && go run main.go" },
+        { label: "Clone + bundle + rails", cmd: "git clone <url> && cd <repo> && bundle install && rails server" },
+        { label: "Clone + cargo + run (Rust)", cmd: "git clone <url> && cd <repo> && cargo build && cargo run" },
+        { label: "Clone + mvn + run (Java)", cmd: "git clone <url> && cd <repo> && mvn clean package && java -jar target/*.jar" },
+        { label: "Clone specific branch", cmd: "git clone -b branch-name <url> && cd <repo>" },
+        { label: "Shallow clone (fast)", cmd: "git clone --depth 1 <url> && cd <repo>" },
+        { label: "Clone + detect + run", cmd: "git clone <url> && cd <repo> && (ls package.json && npm start || ls requirements.txt && python3 main.py || ls composer.json && php -S 0.0.0.0:8000)" },
+      ]},
       { title: "Advanced", commands: [
         { label: "Stash changes", cmd: "git stash" },
         { label: "Apply stash", cmd: "git stash pop" },

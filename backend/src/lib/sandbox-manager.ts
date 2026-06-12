@@ -69,11 +69,38 @@ set -o DEBUG 2>/dev/null
   fs.writeFileSync(sandboxShell, shellContent, "utf8");
   fs.chmodSync(sandboxShell, 0o755);
 
-  fs.writeFileSync(
-    path.join(baseDir, ".welcome"),
-    "ELMODMEN SANDBOX v6 — Isolated Terminal",
-    "utf8"
-  );
+  const sandboxrc = path.join(baseDir, ".sandboxrc");
+  const rcContent = `# ELMODMEN SANDBOX v6 - Auto functions
+auto-serve() {
+  local cmd_template="$1"
+  local start_port="\${2:-8000}"
+  local port=$start_port
+  local max_attempts=100
+  is_port_free() { ! ss -tlnp "sport = :$port" 2>/dev/null | grep -q . && return 0 || return 1; }
+  get_local_ip() { ip -4 addr show 2>/dev/null | grep -oP 'inet \\K[\\d.]+' | grep -v '127.0.0.1' | head -1; }
+  if [ -z "$cmd_template" ]; then
+    echo "Usage: auto-serve <command-with-{PORT}> [start_port]"
+    echo "Example: auto-serve \"python3 -m http.server {PORT}\" 8000"
+    return 1
+  fi
+  for ((i=0; i<max_attempts; i++)); do
+    if is_port_free $port; then
+      local ip=$(get_local_ip)
+      local cmd="\${cmd_template//{PORT}/$port}"
+      echo ""
+      echo -e "\\e[38;5;46m➜\\e[0m  \\e[1mLocal:\\e[0m   \\e[38;5;87mhttp://localhost:$port\\e[0m"
+      [ -n "$ip" ] && echo -e "\\e[38;5;46m➜\\e[0m  \\e[1mNetwork:\\e[0m \\e[38;5;87mhttp://$ip:$port\\e[0m"
+      echo -e "\\e[38;5;245mRunning: $cmd\\e[0m"
+      eval "$cmd"
+      return $?
+    fi
+    port=$((port + 1))
+  done
+  echo "No free port found after $max_attempts attempts"
+  return 1
+}
+`;
+  fs.writeFileSync(sandboxrc, rcContent, "utf8");
 
   return baseDir;
 }
