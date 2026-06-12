@@ -1,0 +1,77 @@
+FROM node:20-slim
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+ENV TERM=xterm-256color
+ENV LANG=C.UTF-8
+ENV LC_ALL=C.UTF-8
+ENV SHELL=/bin/bash
+
+# Install essential tools (all layers merged for smaller image)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 \
+    python3-pip \
+    python3-venv \
+    php-cli \
+    php-mbstring \
+    php-xml \
+    php-curl \
+    php-zip \
+    composer \
+    curl \
+    git \
+    wget \
+    sudo \
+    bash \
+    zsh \
+    nano \
+    vim \
+    htop \
+    unzip \
+    zip \
+    tar \
+    gzip \
+    bzip2 \
+    ca-certificates \
+    procps \
+    net-tools \
+    dnsutils \
+    iproute2 \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set up Python virtual environment
+RUN python3 -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Create runner user and home directory
+RUN groupadd -g 1000 runner && \
+    useradd -m -u 1000 -g 1000 -s /bin/bash runner && \
+    mkdir -p /home/runner && \
+    chown -R 1000:1000 /home/runner
+
+# Pre-create essential directories for read-only rootfs compat
+RUN mkdir -p /tmp /var/tmp /run /home/runner && \
+    chmod 1777 /tmp /var/tmp && \
+    chmod 755 /run
+
+# Set up global npm packages as node user
+RUN npm install -g npm@latest && \
+    npm cache clean --force
+
+# Create shell config directory
+RUN mkdir -p /etc/skel && \
+    echo 'export TERM=xterm-256color' >> /etc/skel/.bashrc && \
+    echo 'export PATH="/opt/venv/bin:$PATH"' >> /etc/skel/.bashrc
+
+# Copy init script
+COPY --chmod=755 scripts/container-init.sh /usr/local/bin/container-init.sh
+
+WORKDIR /home/runner
+USER runner
+
+# Default shell prompt
+ENV PROMPT='%F{green}┌──(%F{white}runner%F{242}㉿%F{white}serverhub%F{green})-[%F{blue}%~%F{green}]%F{green}└─%F{green}$ %f'
+
+ENTRYPOINT ["/usr/local/bin/container-init.sh"]
+CMD ["/bin/bash"]

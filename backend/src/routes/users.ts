@@ -1,0 +1,62 @@
+import { Router, type IRouter } from "express";
+import { Request, Response } from "express";
+import bcrypt from "bcryptjs";
+import { storage } from "../lib/storage";
+import { authenticate, requireAdmin } from "../middleware/authenticate";
+import { notify } from "../lib/telegram";
+import { logger } from "../lib/logger";
+
+const router: IRouter = Router();
+
+router.get("/users", authenticate, requireAdmin, async (_req: Request, res: Response): Promise<void> => {
+  const users = storage.getUsers().map(({ password_hash, ...u }) => u);
+  res.json(users);
+});
+
+router.post("/users", authenticate, requireAdmin, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { username, password, role, display_name, expires_at } = req.body;
+    if (!username || !password) { res.status(400).json({ error: "Username and password required" }); return; }
+    const existing = storage.getUserByUsername(username);
+    if (existing) { res.status(409).json({ error: "Username already exists" }); return; }
+    const user = storage.createUser({
+      username, role: role || "user", display_name: display_name || username,
+      password_hash: bcrypt.hashSync(password, 10), avatar: null, expires_at: expires_at || null, disabled: false,
+    });
+    notify("register", `New user created: *${user.username}* (${user.role})`);
+    res.status(201).json({ id: user.id, username: user.username, role: user.role, display_name: user.display_name, created_at: user.created_at, expires_at: user.expires_at, disabled: user.disabled });
+  } catch (err) {
+    logger.error({ err }, "Create user failed");
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+router.put("/users/:id", authenticate, requireAdmin, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { password, ...updates } = req.body;
+    if (password) updates.password_hash = bcrypt.hashSync(password, 10);
+    const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const updated = storage.updateUser(rawId, updates);
+    if (!updated) { res.status(404).json({ error: "User not found" }); return; }
+    res.json({ id: updated.id, username: updated.username, role: updated.role, display_name: updated.display_name, disabled: updated.disabled, expires_at: updated.expires_at });
+  } catch (err) {
+    logger.error({ err }, "Update user failed");
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+router.delete("/users/:id", authenticate, requireAdmin, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const user = storage.getUserById(rawId);
+    if (!user) { res.status(404).json({ error: "User not found" }); return; }
+    if (user.username === "elmodmen") { res.status(403).json({ error: "Cannot delete main admin" }); return; }
+    storage.deleteUser(rawId);
+    res.json({ success: true });
+  } catch (err) {
+    logger.error({ err }, "Delete user failed");
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+export default router;

@@ -1,0 +1,11 @@
+[phases.setup]
+nixPkgs = ["python3", "make", "gcc", "docker-client"]
+
+[phases.install]
+cmds = ["npm install --include=dev --prefix backend", "npm install --force --prefix frontend"]
+
+[phases.build]
+cmds = ["npx --prefix frontend vite build", "npm run build --prefix backend"]
+
+[start]
+cmd = "node --enable-source-maps backend/dist/index.mjs"

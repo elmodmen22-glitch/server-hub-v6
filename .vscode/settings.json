@@ -1,0 +1,24 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^cd \"c:\\\\Users\\\\Taylandi PH\\\\Desktop\\\\artifacts\\\\server hub v5\\\\backend\" ; npm run build && \\$env:PORT='3001' ; node --enable-source-maps dist/index\\.js$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^netstat -ano \\| findstr :3001$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^tasklist /FI \"PID eq 10244\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^\\$env:PORT='3001' ; node --enable-source-maps dist/index\\.js$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^cd \"c:\\\\Users\\\\Taylandi PH\\\\Desktop\\\\artifacts\\\\server hub v5\\\\backend\" ; \\$env:DISABLE_AUTH='true' ; \\$env:PORT='3001' ; node --enable-source-maps dist/index\\.js$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}

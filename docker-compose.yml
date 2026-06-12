@@ -1,0 +1,30 @@
+version: "3.8"
+
+services:
+  server-hub:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - NODE_ENV=production
+      - SESSION_SECRET=${SESSION_SECRET:-change-this-secret-in-production}
+      - FILES_BASE_DIR=/home/runner
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - CONTAINER_IMAGE=server-hub-user:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - serverhub_data:/root/.serverhub
+      - serverhub_volumes:/var/lib/docker/volumes
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  serverhub_data:
+  serverhub_volumes:

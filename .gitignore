@@ -1,0 +1,12 @@
+node_modules/
+dist/
+*.log
+.env
+.env.local
+.vite/
+.DS_Store
+Thumbs.db
+*.tgz
+.turbo/
+.serverhub/
+serverhub-v5-data.json

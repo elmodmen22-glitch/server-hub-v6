@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: server-hub-v5
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: TERM
+        value: xterm-256color
+      - key: LANG
+        value: en_US.UTF-8
+      - key: LC_ALL
+        value: en_US.UTF-8
+      - key: SESSION_SECRET
+        sync: false
+      - key: CORS_ORIGIN
+        value: "https://server-hub-v5.onrender.com,http://localhost:5180,http://localhost:3001"
+      - key: FILES_BASE_DIR
+        value: /home/runner
+      - key: NVIDIA_API_KEY
+        sync: false
+    disk:
+      name: serverhub-data
+      mountPath: /root/.serverhub
+      sizeGB: 1
+    healthCheckPath: /api/healthz
+    autoDeploy: true
