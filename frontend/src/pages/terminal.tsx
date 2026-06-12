@@ -84,19 +84,7 @@ const ELMODMEN_BANNER = [
   "${grn}│${rst}   ${dim}${g(245)}Type your commands below after the ${rst}${ylw}$${rst}${dim}${g(245)} prompt${rst}                   ${grn}│${rst}",
   "${grn}└─────────────────────────────────────────────────────────────┘${rst}",
   "",
-  "${dim}┌──(${rst}${ylw}runner${rst}${dim}㉿${rst}${ylw}serverhub${rst}${dim})-[${rst}${cyn}~${rst}${dim}]${rst}",
-  "${dim}└─${rst}$ ",
-].join("\r\n");
-
-const MOBILE_BANNER = [
-  "${grn}┌──────────────────────────────────┐${rst}",
-  "${grn}│${rst}  ${bold}${ylw}ELMODMEN SERVER HUB v6${rst}    ${grn}│${rst}",
-  "${grn}│${rst}  ${dim}${g(245)}Isolated Terminal Ready${rst}   ${grn}│${rst}",
-  "${grn}│${rst}  ${dim}${g(245)}Type commands below${rst}        ${grn}│${rst}",
-  "${grn}└──────────────────────────────────┘${rst}",
-  "",
-  "${dim}┌──(${rst}${ylw}runner${rst}${dim}㉿${rst}${ylw}serverhub${rst}${dim})-[${rst}${cyn}~${rst}${dim}]${rst}",
-  "${dim}└─${rst}$ ",
+  "${ylw}$ ${rst}",
 ].join("\r\n");
 
 export default function TerminalPage() {
@@ -213,8 +201,7 @@ export default function TerminalPage() {
     const grn = g(46);
     const ylw = g(226);
     const cyn = g(87);
-    const cols = term.cols || 80;
-    const banner = (cols < 50 ? MOBILE_BANNER : ELMODMEN_BANNER)
+    const banner = ELMODMEN_BANNER
       .replace(/\$\{grn\}/g, grn)
       .replace(/\$\{rst\}/g, rst)
       .replace(/\$\{bold\}/g, bold)
