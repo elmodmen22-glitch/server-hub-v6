@@ -38,7 +38,7 @@ function createSandboxDirs(baseDir: string): void {
     path.join(baseDir, ".local", "share"),
   ];
   for (const d of dirs) {
-    fs.mkdirSync(d, { recursive: true, mode: 0o755 });
+    fs.mkdirSync(d, { recursive: true, mode: 0o700 });
   }
 }
 
@@ -82,7 +82,7 @@ set -o DEBUG 2>/dev/null
     const cmds = list.split(" ");
     return cmds.map(c => `${c}() { echo -e "\\e[1;31m⛔ BLOCKED: '${c}' not allowed in sandbox\\e[0m"; return 1; }`).join("\n");
   };
-  const BLOCKED_LIST = "sudo su chroot docker docker-compose systemctl service journalctl shutdown reboot poweroff halt init mount umount fdisk mkfs dd passwd useradd usermod groupadd modprobe insmod rmmod lsmod iptables ip6tables ufw firewalld crontab at batch nsenter unshare cgexec apt apt-get dpkg yum dnf pacman rpm";
+  const BLOCKED_LIST = "sudo su chroot nsenter unshare cgexec docker docker-compose systemctl service journalctl shutdown reboot poweroff halt init mount umount fdisk mkfs dd passwd useradd usermod groupadd modprobe insmod rmmod lsmod iptables ip6tables ufw firewalld crontab at batch apt apt-get dpkg yum dnf pacman rpm update-alternatives add-apt-repository";
   const rcContent = `# ELMODMEN SANDBOX v6 - Auto functions
 ${blockedCmds(BLOCKED_LIST)}
 auto-serve() {
