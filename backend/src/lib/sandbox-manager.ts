@@ -70,6 +70,7 @@ set -o DEBUG 2>/dev/null
   fs.chmodSync(sandboxShell, 0o755);
 
   const sandboxrc = path.join(baseDir, ".sandboxrc");
+  const bashrc = path.join(baseDir, ".bashrc");
   const rcContent = `# ELMODMEN SANDBOX v6 - Auto functions
 auto-serve() {
   local cmd_template="$1"
@@ -101,6 +102,11 @@ auto-serve() {
 }
 `;
   fs.writeFileSync(sandboxrc, rcContent, "utf8");
+  fs.writeFileSync(bashrc, `# ELMODMEN SANDBOX v6 - .bashrc
+export SANDBOX_HOME="${baseDir.replace(/\\/g, "/")}"
+export SANDBOX_ID="${id}"
+source "\${SANDBOX_HOME}/.sandboxrc" 2>/dev/null
+`, "utf8");
 
   return baseDir;
 }
@@ -130,9 +136,9 @@ function getShellArgs(shell: string, homeDir: string): string[] {
     return [];
   }
   if (shell.includes("zsh")) {
-    return ["--no-rcs", "--no-globalrcs"];
+    return [];
   }
-  return ["--norc", "--noprofile"];
+  return [];
 }
 
 export const sandboxManager = {
