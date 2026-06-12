@@ -33,13 +33,16 @@ jobs:
           VITE_API_URL: https://server-hub-v5-wrpt.onrender.com
 
       - name: Copy Capacitor
-        run: npx --prefix frontend cap copy android
+        working-directory: frontend
+        run: npx cap copy android
 
       - name: Sync Capacitor
-        run: npx --prefix frontend cap sync android
+        working-directory: frontend
+        run: npx cap sync android
 
       - name: Build APK
-        run: cd frontend/android && chmod +x gradlew && ./gradlew assembleDebug
+        working-directory: frontend/android
+        run: chmod +x gradlew && ./gradlew assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
