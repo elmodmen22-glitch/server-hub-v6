@@ -94,9 +94,7 @@ terminalRouterAPI.get("/terminal/sessions/:id/alive", authenticate, async (req: 
     return;
   }
   try {
-    const alive = session.sandboxProcess
-      ? !session.sandboxProcess.killed
-      : session.pty && !session.pty._closed;
+    const alive = session.pty && !session.pty._closed;
     res.json({ alive: !!alive });
   } catch {
     res.json({ alive: false });
@@ -196,35 +194,46 @@ terminalRouterAPI.post("/terminal/sessions", authenticate, async (req: Request, 
   session.sandboxHome = homeDir;
   session.isolated = true;
 
-  const shellReady = new Promise<void>((resolve, reject) => {
-    const proc = sandboxManager.spawnShell(
-      sandboxId,
-      80,
-      24,
-      (data) => {
-        session.outputBuffer.push(data);
-        if (session.outputBuffer.length > MAX_BUFFER_LINES) {
-          session.outputBuffer.splice(0, session.outputBuffer.length - MAX_BUFFER_LINES);
-        }
-        broadcastToClients(session, { type: "output", data });
-      },
-      () => {
-        session.status = "exited";
-        broadcastToClients(session, { type: "exit" });
-      }
-    );
-
-    if (proc) {
-      session.sandboxProcess = proc;
-      proc.on("spawn", () => resolve());
-      setTimeout(() => resolve(), 1000);
-    } else {
-      reject(new Error("Failed to spawn sandbox shell"));
-    }
-  });
+  if (!ptyModule) {
+    sandboxManager.destroySandbox(sandboxId);
+    res.status(500).json({ error: "Terminal not available" });
+    return;
+  }
 
   try {
-    await shellReady;
+    const { shell, args } = getShell();
+    const ptyProcess = ptyModule.spawn(shell, args, {
+      name: "xterm-256color",
+      cols: 80,
+      rows: 24,
+      cwd: homeDir,
+      env: {
+        ...process.env,
+        TERM: "xterm-256color",
+        COLORTERM: "truecolor",
+        LANG: "C.UTF-8",
+        LC_ALL: "C.UTF-8",
+        HOME: homeDir,
+        SANDBOX_HOME: homeDir,
+        SANDBOX_ID: sandboxId,
+      },
+    });
+
+    session.pty = ptyProcess;
+
+    ptyProcess.onData((data: string) => {
+      session.outputBuffer.push(data);
+      if (session.outputBuffer.length > MAX_BUFFER_LINES) {
+        session.outputBuffer.splice(0, session.outputBuffer.length - MAX_BUFFER_LINES);
+      }
+      broadcastToClients(session, { type: "output", data });
+    });
+
+    ptyProcess.onExit(() => {
+      session.status = "exited";
+      broadcastToClients(session, { type: "exit" });
+    });
+
     logActivity({
       user: username,
       action: "terminal.create",
@@ -232,7 +241,7 @@ terminalRouterAPI.post("/terminal/sessions", authenticate, async (req: Request, 
       details: `Terminal session "${name}" created (Sandbox)`,
       status: "success",
     });
-    logger.info({ id, sandboxId, isolated: true }, "Terminal session created (Sandbox)");
+    logger.info({ id, homeDir, isolated: true }, "Terminal session created (Sandbox)");
     sessions.set(id, session);
     res.status(201).json({
       id,
@@ -242,66 +251,9 @@ terminalRouterAPI.post("/terminal/sessions", authenticate, async (req: Request, 
       isolated: true,
     });
   } catch (err) {
-    logger.warn({ err }, "Sandbox failed, trying node-pty fallback");
-    if (!ptyModule) {
-      res.status(500).json({ error: "Terminal not available" });
-      return;
-    }
-    try {
-      const { shell, args } = getShell();
-      const ptyProcess = ptyModule.spawn(shell, args, {
-        name: "xterm-256color",
-        cols: 80,
-        rows: 24,
-        cwd: homeDir || workDir,
-        env: {
-          ...process.env,
-          TERM: "xterm-256color",
-          COLORTERM: "truecolor",
-          LANG: "C.UTF-8",
-          LC_ALL: "C.UTF-8",
-          HOME: homeDir || process.env.HOME,
-          SANDBOX_HOME: homeDir || "",
-          SANDBOX_ID: sandboxId || "",
-        },
-      });
-
-      session.pty = ptyProcess;
-      session.isolated = true;
-
-      ptyProcess.onData((data: string) => {
-        session.outputBuffer.push(data);
-        if (session.outputBuffer.length > MAX_BUFFER_LINES) {
-          session.outputBuffer.splice(0, session.outputBuffer.length - MAX_BUFFER_LINES);
-        }
-        broadcastToClients(session, { type: "output", data });
-      });
-
-      ptyProcess.onExit(({ exitCode }: { exitCode: number }) => {
-        session.status = "exited";
-        broadcastToClients(session, { type: "exit" });
-      });
-
-      logActivity({
-        user: username,
-        action: "terminal.create",
-        target: `session/${id}`,
-        details: `Terminal session "${name}" created (Sandbox-pty)`,
-        status: "success",
-      });
-      logger.info({ id, shell, isolated: true }, "Terminal session created (Sandbox-pty)");
-      sessions.set(id, session);
-      res.status(201).json({
-        id,
-        name: session.name,
-        created_at: session.created_at,
-        status: session.status,
-        isolated: true,
-      });
-    } catch (ptyErr) {
-      logger.error({ err: ptyErr }, "All terminal backends failed");
-      res.status(500).json({ error: "Failed to create terminal session" });
-    }
+    logger.error({ err }, "Sandbox terminal failed");
+    sandboxManager.destroySandbox(sandboxId);
+    res.status(500).json({ error: "Failed to create terminal session" });
   }
 });
 
@@ -321,10 +273,10 @@ terminalRouterAPI.delete(
       if (session.dockerStream) {
         try { session.dockerStream.end(); } catch {}
       }
+      if (session.pty) session.pty.kill();
       if (session.sandboxId) {
         try { sandboxManager.destroySandbox(session.sandboxId); } catch {}
       }
-      if (session.pty) session.pty.kill();
       if (session.sandboxProcess) {
         try { session.sandboxProcess.kill("SIGKILL"); } catch {}
       }
@@ -385,10 +337,10 @@ export function setupTerminalWebSocket(wss: WebSocketServer): void {
         if (msg.type === "input" && msg.data) {
           if (session.dockerStream) {
             session.dockerStream.write(msg.data);
-          } else if (session.sandboxProcess) {
-            sandboxManager.writeToShell(session.sandboxId, msg.data);
           } else if (session.pty) {
             session.pty.write(msg.data);
+          } else if (session.sandboxProcess) {
+            sandboxManager.writeToShell(session.sandboxId, msg.data);
           }
           for (const ch of msg.data) {
             if (ch === "\r" || ch === "\n") {
@@ -410,9 +362,7 @@ export function setupTerminalWebSocket(wss: WebSocketServer): void {
             }
           }
         } else if (msg.type === "resize" && msg.cols && msg.rows) {
-          if (session.sandboxId) {
-            sandboxManager.resizeShell(session.sandboxId, msg.cols, msg.rows);
-          } else if (session.pty && typeof session.pty.resize === "function") {
+          if (session.pty && typeof session.pty.resize === "function") {
             try { session.pty.resize(msg.cols, msg.rows); } catch {}
           }
         } else if (msg.type === "ping") {
