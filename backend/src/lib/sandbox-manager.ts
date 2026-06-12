@@ -352,17 +352,7 @@ export const sandboxManager = {
   },
 
   startCleanupLoop(): void {
-    setInterval(() => {
-      const now = Date.now();
-      for (const [id, sandbox] of sandboxes.entries()) {
-        const idle = now - sandbox.lastActivity.getTime();
-        if (idle > MAX_IDLE) {
-          logger.info({ id, idleMs: idle }, "Cleaning up idle sandbox");
-          this.destroySandbox(id);
-        }
-      }
-    }, CLEANUP_INTERVAL);
-    logger.info("Sandbox cleanup loop started");
+    logger.info("Sandbox cleanup loop disabled — sandboxes persist until session ends");
   },
 
   getStats(): { active: number; totalCreated: number } {
