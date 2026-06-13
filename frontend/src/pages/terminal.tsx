@@ -76,15 +76,6 @@ const ELM_BIG = [
   "${ylw}╚══════╝╚══════╝╚═╝     ╚═╝ ╚═════╝ ╚═════╝ ╚═╝     ╚═╝╚══════╝╚═╝  ╚═══╝${rst}",
 ];
 
-const VPS_BIG = [
-  "${dim}${ylw}██╗   ██╗██████╗ ███████╗${rst}",
-  "${dim}${ylw}██║   ██║██╔══██╗██╔════╝${rst}",
-  "${dim}${ylw}██║   ██║██████╔╝███████╗${rst}",
-  "${dim}${ylw}╚██╗ ██╔╝██╔═══╝ ╚════██║${rst}",
-  "${dim}${ylw} ╚████╔╝ ██║     ███████║${rst}",
-  "${dim}${ylw}  ╚═══╝  ╚═╝     ╚══════╝${rst}",
-];
-
 function buildBanner(): string {
   const g = (c: number) => `\x1b[38;5;${c}m`;
   const rst = "\x1b[0m";
@@ -97,10 +88,6 @@ function buildBanner(): string {
     BOX.tl + BOX.h.repeat(w) + BOX.tr,
     BOX.v + S(w) + BOX.v,
     ...ELM_BIG.map(l => BOX.v + "  " + t(l) + "  " + BOX.v),
-    BOX.v + S(w) + BOX.v,
-    ...VPS_BIG.map(l => BOX.v + S(26) + t(l) + S(26) + BOX.v),
-    BOX.v + S(w) + BOX.v,
-    BOX.v + S(11) + t("${dim}Server Hub v6  •  Isolated Sandbox  •  Secure Terminal${rst}") + S(12) + BOX.v,
     BOX.v + S(w) + BOX.v,
     BOX.bl + BOX.h.repeat(w) + BOX.br,
     "",
