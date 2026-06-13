@@ -70,9 +70,36 @@ function buildBanner(cols: number): string {
   const dim = "\x1b[2m";
   const bold = "\x1b[1m";
   const t = (s: string) => s.replace(/\$\{ylw\}/g, ylw).replace(/\$\{rst\}/g, rst).replace(/\$\{dim\}/g, dim).replace(/\$\{bold\}/g, bold);
-  const hr = "─".repeat(cols);
+  const hr = t("${dim}" + "─".repeat(cols) + "${rst}");
 
   if (cols < 18) return t("${ylw}$ ${rst}");
+
+  if (cols >= 79) {
+    const art = [
+      "${ylw}███████╗██╗     ███╗   ███╗ ██████╗ ██████╗ ███╗   ███╗███████╗███╗   ██╗${rst}",
+      "${ylw}██╔════╝██║     ████╗ ████║██╔═══██╗██╔══██╗████╗ ████║██╔════╝████╗  ██║${rst}",
+      "${ylw}█████╗  ██║     ██╔████╔██║██║   ██║██║  ██║██╔████╔██║█████╗  ██╔██╗ ██║${rst}",
+      "${ylw}██╔══╝  ██║     ██║╚██╔╝██║██║   ██║██║  ██║██║╚██╔╝██║██╔══╝  ██║╚██╗██║${rst}",
+      "${ylw}███████╗███████╗██║ ╚═╝ ██║╚██████╔╝██████╔╝██║ ╚═╝ ██║███████╗██║ ╚████║${rst}",
+      "${ylw}╚══════╝╚══════╝╚═╝     ╚═╝ ╚═════╝ ╚═════╝ ╚═╝     ╚═╝╚══════╝╚═╝  ╚═══╝${rst}",
+    ];
+    const pad = Math.floor((cols - 77) / 2);
+    const eol = cols - pad - 77;
+    const sub = t("${dim}Isolated Sandbox  •  Secure Terminal${rst}");
+    const sl = Math.floor((cols - 32) / 2);
+    return [
+      "",
+      hr,
+      "",
+      ...art.map(l => " ".repeat(pad) + "  " + t(l) + "  " + " ".repeat(eol)),
+      "",
+      " ".repeat(sl) + sub + " ".repeat(cols - sl - 32),
+      "",
+      hr,
+      "",
+      t("${ylw}$ ${rst}"),
+    ].join("\r\n");
+  }
 
   if (cols >= 60) {
     const txt = t("${bold}${ylw}E L M O D M E N${rst}");
@@ -81,13 +108,13 @@ function buildBanner(cols: number): string {
     const sl = Math.floor((cols - 32) / 2);
     return [
       "",
-      t("${dim}" + hr + "${rst}"),
+      hr,
       "",
       " ".repeat(cl) + txt + " ".repeat(cols - cl - 15),
       "",
       " ".repeat(sl) + sub + " ".repeat(cols - sl - 32),
       "",
-      t("${dim}" + hr + "${rst}"),
+      hr,
       "",
       t("${ylw}$ ${rst}"),
     ].join("\r\n");
@@ -98,11 +125,11 @@ function buildBanner(cols: number): string {
     const cl = Math.floor((cols - 8) / 2);
     return [
       "",
-      t("${dim}" + hr + "${rst}"),
+      hr,
       "",
       " ".repeat(cl) + txt + " ".repeat(cols - cl - 8),
       "",
-      t("${dim}" + hr + "${rst}"),
+      hr,
       "",
       t("${ylw}$ ${rst}"),
     ].join("\r\n");
