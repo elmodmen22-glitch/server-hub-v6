@@ -64,73 +64,19 @@ const VIRTUAL_KEYS = [
   { label: "▶", value: "\x1b[C", color: "#8b5cf6" },
 ];
 
-function buildBanner(cols: number): string {
+function buildBanner(): string {
   const rst = "\x1b[0m";
   const ylw = "\x1b[38;5;226m";
-  const dim = "\x1b[2m";
   const bold = "\x1b[1m";
-  const t = (s: string) => s.replace(/\$\{ylw\}/g, ylw).replace(/\$\{rst\}/g, rst).replace(/\$\{dim\}/g, dim).replace(/\$\{bold\}/g, bold);
-  const inner = cols - 2;
-  if (inner < 12) return t("${ylw}$ ${rst}");
-
-  const pad = (n: number) => " ".repeat(Math.max(0, n));
-
-  if (inner >= 77) {
-    const art = [
-      "${ylw}███████╗██╗     ███╗   ███╗ ██████╗ ██████╗ ███╗   ███╗███████╗███╗   ██╗${rst}",
-      "${ylw}██╔════╝██║     ████╗ ████║██╔═══██╗██╔══██╗████╗ ████║██╔════╝████╗  ██║${rst}",
-      "${ylw}█████╗  ██║     ██╔████╔██║██║   ██║██║  ██║██╔████╔██║█████╗  ██╔██╗ ██║${rst}",
-      "${ylw}██╔══╝  ██║     ██║╚██╔╝██║██║   ██║██║  ██║██║╚██╔╝██║██╔══╝  ██║╚██╗██║${rst}",
-      "${ylw}███████╗███████╗██║ ╚═╝ ██║╚██████╔╝██████╔╝██║ ╚═╝ ██║███████╗██║ ╚████║${rst}",
-      "${ylw}╚══════╝╚══════╝╚═╝     ╚═╝ ╚═════╝ ╚═════╝ ╚═╝     ╚═╝╚══════╝╚═╝  ╚═══╝${rst}",
-    ];
-    const aw = 73;
-    const lp = Math.floor((inner - aw) / 2);
-    const rp = inner - lp - aw;
-    return [
-      "┌" + "─".repeat(inner) + "┐",
-      "│" + pad(inner) + "│",
-      ...art.map(l => "│" + pad(lp) + t(l) + pad(rp) + "│"),
-      "│" + pad(inner) + "│",
-      "└" + "─".repeat(inner) + "┘",
-      "",
-      t("${ylw}$ ${rst}"),
-    ].join("\r\n");
-  }
-
-  if (inner >= 45) {
-    const art = [
-      "${ylw} _     ______  __  __ ______ _____ _   _ ${rst}",
-      "${ylw}| |   |  ____||  \\/  |  ____|_   _| \\ | |${rst}",
-      "${ylw}| |   | |__   | \\  / | |__    | | |  \\| |${rst}",
-      "${ylw}| |   |  __|  | |\\/| |  __|   | | | . ` |${rst}",
-      "${ylw}| |___| |____ | |  | | |____ _| |_| |\\  |${rst}",
-      "${ylw}|_____|______||_|  |_|______|_____|_| \\_|${rst}",
-    ];
-    const aw = 41;
-    const lp = Math.floor((inner - aw) / 2);
-    const rp = inner - lp - aw;
-    return [
-      "┌" + "─".repeat(inner) + "┐",
-      "│" + pad(inner) + "│",
-      ...art.map(l => "│" + pad(lp) + t(l) + pad(rp) + "│"),
-      "│" + pad(inner) + "│",
-      "└" + "─".repeat(inner) + "┘",
-      "",
-      t("${ylw}$ ${rst}"),
-    ].join("\r\n");
-  }
-
-  const txt = "${bold}${ylw}ELMODMEN${rst}";
-  const tw = 8;
-  const lp = Math.floor((inner - tw) / 2);
-  const rp = inner - lp - tw;
+  const t = (s: string) => s.replace(/\$\{ylw\}/g, ylw).replace(/\$\{rst\}/g, rst).replace(/\$\{bold\}/g, bold);
+  const w = 18;
   return [
-    "┌" + "─".repeat(inner) + "┐",
-    "│" + pad(inner) + "│",
-    "│" + pad(lp) + t(txt) + pad(rp) + "│",
-    "│" + pad(inner) + "│",
-    "└" + "─".repeat(inner) + "┘",
+    "",
+    "┌" + "─".repeat(w) + "┐",
+    "│" + " ".repeat(w) + "│",
+    "│     " + t("${bold}${ylw}ELMODMEN${rst}") + "     │",
+    "│" + " ".repeat(w) + "│",
+    "└" + "─".repeat(w) + "┘",
     "",
     t("${ylw}$ ${rst}"),
   ].join("\r\n");
@@ -241,9 +187,8 @@ export default function TerminalPage() {
     return resources.current[tabId];
   };
 
-  const writeElmodmenBanner = (term: XTerm) => {
-    const banner = buildBanner(term.cols || 80);
-    term.write(banner);
+  const writeElmodmenBanner = (t: XTerm) => {
+    t.write(buildBanner());
   };
 
   const sendToTerminal = (text: string) => {
@@ -391,11 +336,25 @@ export default function TerminalPage() {
       const { ws } = getRes(tabId);
       if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: "input", data }));
     });
-    setTimeout(() => {
-      rewriteBanner();
-      resizeObs.observe(el);
-      res.resizeObserver = resizeObs;
-    }, 50);
+    let prevW = 0, prevH = 0, stableFrames = 0;
+    const checkStable = () => {
+      if (res.destroyed) return;
+      const w = el.clientWidth, h = el.clientHeight;
+      if (w > 0 && h > 0 && w === prevW && h === prevH) {
+        stableFrames++;
+        if (stableFrames >= 2) {
+          rewriteBanner();
+          resizeObs.observe(el);
+          res.resizeObserver = resizeObs;
+          return;
+        }
+      } else {
+        stableFrames = 0;
+        prevW = w; prevH = h;
+      }
+      requestAnimationFrame(checkStable);
+    };
+    requestAnimationFrame(checkStable);
     term.onSelectionChange(() => {
       const sel = term.getSelection();
       if (sel) navigator.clipboard.writeText(sel).catch(() => {});
