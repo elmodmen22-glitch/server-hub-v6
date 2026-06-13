@@ -64,32 +64,52 @@ const VIRTUAL_KEYS = [
   { label: "▶", value: "\x1b[C", color: "#8b5cf6" },
 ];
 
-const S = (n: number) => " ".repeat(n);
-const BOX = { tl: "┌", tr: "┐", bl: "└", br: "┘", h: "─", v: "│" };
-
 const ELM_BIG = [
-  "${ylw}███████╗██╗     ███╗   ███╗ ██████╗ ██████╗ ███╗   ███╗███████╗███╗   ██╗${rst}",
-  "${ylw}██╔════╝██║     ████╗ ████║██╔═══██╗██╔══██╗████╗ ████║██╔════╝████╗  ██║${rst}",
-  "${ylw}█████╗  ██║     ██╔████╔██║██║   ██║██║  ██║██╔████╔██║█████╗  ██╔██╗ ██║${rst}",
-  "${ylw}██╔══╝  ██║     ██║╚██╔╝██║██║   ██║██║  ██║██║╚██╔╝██║██╔══╝  ██║╚██╗██║${rst}",
-  "${ylw}███████╗███████╗██║ ╚═╝ ██║╚██████╔╝██████╔╝██║ ╚═╝ ██║███████╗██║ ╚████║${rst}",
-  "${ylw}╚══════╝╚══════╝╚═╝     ╚═╝ ╚═════╝ ╚═════╝ ╚═╝     ╚═╝╚══════╝╚═╝  ╚═══╝${rst}",
+  "${ylw}███████╗██╗     ███╗   ███╗ ██████╗ ██████╗ ███╗   ███╗${rst}",
+  "${ylw}██╔════╝██║     ████╗ ████║██╔═══██╗██╔══██╗████╗ ████║${rst}",
+  "${ylw}█████╗  ██║     ██╔████╔██║██║   ██║██║  ██║██╔████╔██║${rst}",
+  "${ylw}██╔══╝  ██║     ██║╚██╔╝██║██║   ██║██║  ██║██║╚██╔╝██║${rst}",
+  "${ylw}███████╗███████╗██║ ╚═╝ ██║╚██████╔╝██████╔╝██║ ╚═╝ ██║${rst}",
+  "${ylw}╚══════╝╚══════╝╚═╝     ╚═╝ ╚═════╝ ╚═════╝ ╚═╝     ╚═╝${rst}",
 ];
 
-function buildBanner(): string {
-  const g = (c: number) => `\x1b[38;5;${c}m`;
+const ELM_MID = [
+  "${ylw} _     ______  __  __ ______ _____ _   _ ${rst}",
+  "${ylw}| |   |  ____||  \\/  |  ____|_   _| \\ | |${rst}",
+  "${ylw}| |   | |__   | \\  / | |__    | | |  \\| |${rst}",
+  "${ylw}| |   |  __|  | |\\/| |  __|   | | | . ` |${rst}",
+  "${ylw}| |___| |____ | |  | | |____ _| |_| |\\  |${rst}",
+  "${ylw}|_____|______||_|  |_|______|_____|_| \\_|${rst}",
+];
+
+function buildBanner(cols: number): string {
   const rst = "\x1b[0m";
   const dim = "\x1b[2m";
-  const ylw = g(226);
+  const ylw = "\x1b[38;5;226m";
   const t = (s: string) => s.replace(/\$\{ylw\}/g, ylw).replace(/\$\{rst\}/g, rst).replace(/\$\{dim\}/g, dim);
-  const w = 77;
+
+  if (cols >= 70) {
+    return [
+      "",
+      ...ELM_BIG.map(l => t(l)),
+      "",
+      t("${ylw}$ ${rst}"),
+    ].join("\r\n");
+  }
+
+  if (cols >= 42) {
+    return [
+      "",
+      ...ELM_MID.map(l => t(l)),
+      "",
+      t("${ylw}$ ${rst}"),
+    ].join("\r\n");
+  }
+
   return [
     "",
-    BOX.tl + BOX.h.repeat(w) + BOX.tr,
-    BOX.v + S(w) + BOX.v,
-    ...ELM_BIG.map(l => BOX.v + "  " + t(l) + "  " + BOX.v),
-    BOX.v + S(w) + BOX.v,
-    BOX.bl + BOX.h.repeat(w) + BOX.br,
+    t("${ylw}ELMODMEN${rst}"),
+    t("${dim}Isolated Sandbox  •  Secure Terminal${rst}"),
     "",
     t("${ylw}$ ${rst}"),
   ].join("\r\n");
@@ -201,7 +221,7 @@ export default function TerminalPage() {
   };
 
   const writeElmodmenBanner = (term: XTerm) => {
-    const banner = buildBanner();
+    const banner = buildBanner(term.cols || 80);
     term.write(banner);
   };
 
