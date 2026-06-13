@@ -1,26 +1,30 @@
 package com.elmodmen.serverhub;
 
 import android.annotation.SuppressLint;
+import android.content.Intent;
 import android.graphics.Bitmap;
+import android.net.Uri;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.view.KeyEvent;
 import android.view.View;
+import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.ProgressBar;
-import android.widget.FrameLayout;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
-@SuppressLint("SetJavaScriptEnabled")
 public class MainActivity extends AppCompatActivity {
 
     private WebView webView;
     private SwipeRefreshLayout swipeRefreshLayout;
     private ProgressBar progressBar;
+    private ValueCallback<Uri[]> filePathCallback;
+    private static final int FILE_CHOOSER_REQUEST = 1001;
 
     private static final String APP_URL = "https://server-hub-v5-wrpt.onrender.com";
 
@@ -46,6 +50,8 @@ public class MainActivity extends AppCompatActivity {
         webView.getSettings().setLoadWithOverviewMode(true);
         webView.getSettings().setUseWideViewPort(true);
         webView.getSettings().setCacheMode(android.webkit.WebSettings.LOAD_DEFAULT);
+        webView.getSettings().setAllowFileAccess(true);
+        webView.getSettings().setAllowContentAccess(true);
         webView.getSettings().setUserAgentString(
             webView.getSettings().getUserAgentString() + " ServerHubApp/1.0"
         );
@@ -77,6 +83,25 @@ public class MainActivity extends AppCompatActivity {
             public void onProgressChanged(WebView view, int newProgress) {
                 progressBar.setProgress(newProgress);
             }
+
+            @Override
+            public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> filePath,
+                                              FileChooserParams fileChooserParams) {
+                if (filePathCallback != null) {
+                    filePathCallback.onReceiveValue(null);
+                }
+                filePathCallback = filePath;
+
+                Intent intent = fileChooserParams.createIntent();
+                try {
+                    startActivityForResult(intent, FILE_CHOOSER_REQUEST);
+                } catch (Exception e) {
+                    filePathCallback.onReceiveValue(null);
+                    filePathCallback = null;
+                    return false;
+                }
+                return true;
+            }
         });
     }
 
@@ -86,6 +111,32 @@ public class MainActivity extends AppCompatActivity {
             android.R.color.holo_orange_dark,
             android.R.color.holo_green_dark
         );
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == FILE_CHOOSER_REQUEST) {
+            if (filePathCallback == null) return;
+            Uri[] results = null;
+            if (resultCode == RESULT_OK) {
+                if (data != null) {
+                    String dataString = data.getDataString();
+                    if (dataString != null) {
+                        results = new Uri[]{Uri.parse(dataString)};
+                    } else if (data.getClipData() != null) {
+                        int count = data.getClipData().getItemCount();
+                        results = new Uri[count];
+                        for (int i = 0; i < count; i++) {
+                            results[i] = data.getClipData().getItemAt(i).getUri();
+                        }
+                    }
+                }
+            }
+            filePathCallback.onReceiveValue(results);
+            filePathCallback = null;
+            return;
+        }
+        super.onActivityResult(requestCode, resultCode, data);
     }
 
     @Override
