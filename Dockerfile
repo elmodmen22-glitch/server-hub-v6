@@ -5,6 +5,7 @@ ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV LANG=C.UTF-8
 ENV LC_ALL=C.UTF-8
+ENV PIP_REQUIRE_VIRTUALENV=false
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
@@ -27,12 +28,38 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     apt-utils \
     sudo \
     docker.io \
+    lsof \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# Install cloudflared
+RUN curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o /usr/local/bin/cloudflared && \
+    chmod +x /usr/local/bin/cloudflared
 
 RUN mkdir -p /home/runner && chmod 777 /home/runner
 RUN python3 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
+
+# PEP 668 nuclear fix: delete the externally-managed marker file(s)
+RUN rm -f /usr/lib/python3*/EXTERNALLY-MANAGED 2>/dev/null; \
+    rm -f /usr/lib/python3*/site-packages/externally-managed* 2>/dev/null; \
+    echo "EXTERNALLY-MANAGED files deleted"
+
+# System-wide pip.conf with break-system-packages (read by pip at /etc/pip.conf)
+RUN echo -e "[global]\nbreak-system-packages = true\nrequire-virtualenv = false" > /etc/pip.conf && \
+    mkdir -p /home/runner/.config/pip && \
+    echo -e "[global]\nbreak-system-packages = true" > /home/runner/.config/pip/pip.conf && \
+    chmod -R 777 /home/runner/.config/pip
+
+# Upgrade pip to latest (supports --break-system-packages)
+RUN pip install --upgrade pip setuptools wheel 2>&1
+
+# Create runner user with sudo for apt/package management
+RUN groupadd -g 1000 runner 2>/dev/null; \
+    useradd -m -u 1000 -g runner -d /home/runner -s /bin/bash runner 2>/dev/null; \
+    echo "runner ALL=(ALL) NOPASSWD: /usr/bin/apt, /usr/bin/apt-get, /usr/bin/dpkg, /usr/bin/pip*, /usr/bin/npm*, /usr/bin/node*, /usr/local/bin/cloudflared" > /etc/sudoers.d/runner; \
+    chown -R 1000:1000 /home/runner 2>/dev/null; \
+    true
 
 WORKDIR /app
 

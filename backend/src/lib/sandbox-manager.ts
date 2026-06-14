@@ -457,6 +457,8 @@ export const sandboxManager = {
       COLORTERM: "truecolor",
       LANG: "C.UTF-8",
       LC_ALL: "C.UTF-8",
+      PIP_REQUIRE_VIRTUALENV: "false",
+      PIP_BREAK_SYSTEM_PACKAGES: "1",
       PATH: "/home/runner/.venv/bin:/home/runner/node_modules/.bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
       TERMINFO: "/usr/share/terminfo",
     };
