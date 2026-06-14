@@ -64,86 +64,25 @@ const VIRTUAL_KEYS = [
   { label: "▶", value: "\x1b[C", color: "#8b5cf6" },
 ];
 
-function buildBanner(cols: number): string {
-  const rst = "\x1b[0m";
-  const ylw = "\x1b[38;5;226m";
-  const dim = "\x1b[2m";
-  const bold = "\x1b[1m";
-  const t = (s: string) => s.replace(/\$\{ylw\}/g, ylw).replace(/\$\{rst\}/g, rst).replace(/\$\{dim\}/g, dim).replace(/\$\{bold\}/g, bold);
-  const hr = t("${dim}" + "─".repeat(cols) + "${rst}");
+const S = (n: number) => " ".repeat(n);
 
-  if (cols < 18) return t("${ylw}$ ${rst}");
+const DESKTOP_BANNER = [
+  "${ylw}$ ${rst}",
+].join("\r\n");
 
-  if (cols >= 79) {
-    const art = [
-      "${ylw}███████╗██╗     ███╗   ███╗ ██████╗ ██████╗ ███╗   ███╗███████╗███╗   ██╗${rst}",
-      "${ylw}██╔════╝██║     ████╗ ████║██╔═══██╗██╔══██╗████╗ ████║██╔════╝████╗  ██║${rst}",
-      "${ylw}█████╗  ██║     ██╔████╔██║██║   ██║██║  ██║██╔████╔██║█████╗  ██╔██╗ ██║${rst}",
-      "${ylw}██╔══╝  ██║     ██║╚██╔╝██║██║   ██║██║  ██║██║╚██╔╝██║██╔══╝  ██║╚██╗██║${rst}",
-      "${ylw}███████╗███████╗██║ ╚═╝ ██║╚██████╔╝██████╔╝██║ ╚═╝ ██║███████╗██║ ╚████║${rst}",
-      "${ylw}╚══════╝╚══════╝╚═╝     ╚═╝ ╚═════╝ ╚═════╝ ╚═╝     ╚═╝╚══════╝╚═╝  ╚═══╝${rst}",
-    ];
-    const pad = Math.floor((cols - 77) / 2);
-    const eol = cols - pad - 77;
-    const sub = t("${dim}Isolated Sandbox  •  Secure Terminal${rst}");
-    const sl = Math.floor((cols - 32) / 2);
-    return [
-      "",
-      hr,
-      "",
-      ...art.map(l => " ".repeat(pad) + "  " + t(l) + "  " + " ".repeat(eol)),
-      "",
-      " ".repeat(sl) + sub + " ".repeat(cols - sl - 32),
-      "",
-      hr,
-      "",
-      t("${ylw}$ ${rst}"),
-    ].join("\r\n");
-  }
+const MEDIUM_BANNER = [
+  "${ylw}$ ${rst}",
+].join("\r\n");
 
-  if (cols >= 60) {
-    const txt = t("${bold}${ylw}E L M O D M E N${rst}");
-    const sub = t("${dim}Isolated Sandbox  •  Secure Terminal${rst}");
-    const cl = Math.floor((cols - 15) / 2);
-    const sl = Math.floor((cols - 32) / 2);
-    return [
-      "",
-      hr,
-      "",
-      " ".repeat(cl) + txt + " ".repeat(cols - cl - 15),
-      "",
-      " ".repeat(sl) + sub + " ".repeat(cols - sl - 32),
-      "",
-      hr,
-      "",
-      t("${ylw}$ ${rst}"),
-    ].join("\r\n");
-  }
-
-  if (cols >= 24) {
-    const txt = t("${bold}${ylw}ELMODMEN${rst}");
-    const cl = Math.floor((cols - 8) / 2);
-    return [
-      "",
-      hr,
-      "",
-      " ".repeat(cl) + txt + " ".repeat(cols - cl - 8),
-      "",
-      hr,
-      "",
-      t("${ylw}$ ${rst}"),
-    ].join("\r\n");
-  }
-
-  const txt = t("${bold}${ylw}ELMODMEN${rst}");
-  const cl = Math.floor((cols - 8) / 2);
-  return [
-    "",
-    " ".repeat(cl) + txt + " ".repeat(cols - cl - 8),
-    "",
-    t("${ylw}$ ${rst}"),
-  ].join("\r\n");
-}
+const MOBILE_BANNER = [
+  "${bold}${ylw}  _____ _     __  __  ___  ____  __  __ _____ _   _ ${rst}",
+  "${bold}${ylw} | ____| |   |  \\/  |/ _ \\|  _ \\|  \\/  | ____| \\ | |${rst}",
+  "${bold}${ylw} |  _| | |   | |\\/| | | | | | | | |\\/| |  _| |  \\| |${rst}",
+  "${bold}${ylw} | |___| |___| |  | | |_| | |_| | |  | | |___| |\\  |${rst}",
+  "${bold}${ylw} |_____|_____|_|  |_|\\___/|____/|_|  |_|_____|_| \\_|${rst}",
+  "",
+  "${ylw}$ ${rst}",
+].join("\r\n");
 
 export default function TerminalPage() {
   const [tabs, setTabs] = useState<Tab[]>([]);
@@ -241,6 +180,8 @@ export default function TerminalPage() {
     return `${wsBase}/api/terminal/ws/${sessionId}`;
   };
 
+  const welcomeShown = useRef<Record<string, boolean>>({});
+
   const getRes = (tabId: string): TabResources => {
     if (!resources.current[tabId])
       resources.current[tabId] = {
@@ -250,8 +191,28 @@ export default function TerminalPage() {
     return resources.current[tabId];
   };
 
-  const writeElmodmenBanner = (t: XTerm) => {
-    t.write(buildBanner(t.cols || 80));
+  const writeElmodmenBanner = (term: XTerm) => {
+    const g = (code: number) => `\x1b[38;5;${code}m`;
+    const rst = "\x1b[0m";
+    const bold = "\x1b[1m";
+    const dim = "\x1b[2m";
+    const grn = g(46);
+    const ylw = g(226);
+    const cols = term.cols || 80;
+    let raw;
+    if (cols >= 56) {
+      raw = DESKTOP_BANNER;
+    } else {
+      raw = MOBILE_BANNER;
+    }
+    const banner = raw
+      .replace(/\$\{grn\}/g, grn)
+      .replace(/\$\{rst\}/g, rst)
+      .replace(/\$\{bold\}/g, bold)
+      .replace(/\$\{dim\}/g, dim)
+      .replace(/\$\{ylw\}/g, ylw)
+      .replace(/\$\{g\((\d+)\)\}/g, (_, c) => g(parseInt(c)));
+    term.write(banner);
   };
 
   const sendToTerminal = (text: string) => {
@@ -370,23 +331,13 @@ export default function TerminalPage() {
     term.loadAddon(unicode11Addon);
     term.unicode.activeVersion = "11";
     term.open(el);
+    try { fitAddon.fit(); } catch {}
     res.term = term;
     res.fitAddon = fitAddon;
-    let bannerActive = true;
-    const rewriteBanner = () => {
-      try { fitAddon.fit(); } catch {}
-      term.clear();
-      writeElmodmenBanner(term);
-      bannerActive = true;
-    };
     const resizeObs = new ResizeObserver(() => {
       if (res.destroyed || !res.term) { resizeObs.disconnect(); return; }
       try {
         fitAddon.fit();
-        if (bannerActive) {
-          term.clear();
-          writeElmodmenBanner(term);
-        }
         const ws = res.ws;
         if (ws?.readyState === WebSocket.OPEN) {
           const dims = fitAddon.proposeDimensions();
@@ -394,30 +345,17 @@ export default function TerminalPage() {
         }
       } catch {}
     });
+    resizeObs.observe(el);
+    res.resizeObserver = resizeObs;
     term.onData((data) => {
-      bannerActive = false;
       const { ws } = getRes(tabId);
       if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: "input", data }));
     });
-    let prevW = 0, prevH = 0, stableFrames = 0;
-    const checkStable = () => {
-      if (res.destroyed) return;
-      const w = el.clientWidth, h = el.clientHeight;
-      if (w > 0 && h > 0 && w === prevW && h === prevH) {
-        stableFrames++;
-        if (stableFrames >= 2) {
-          rewriteBanner();
-          resizeObs.observe(el);
-          res.resizeObserver = resizeObs;
-          return;
-        }
-      } else {
-        stableFrames = 0;
-        prevW = w; prevH = h;
-      }
-      requestAnimationFrame(checkStable);
-    };
-    requestAnimationFrame(checkStable);
+    if (!welcomeShown.current[tabId]) {
+      welcomeShown.current[tabId] = true;
+      term.clear();
+      writeElmodmenBanner(term);
+    }
     term.onSelectionChange(() => {
       const sel = term.getSelection();
       if (sel) navigator.clipboard.writeText(sel).catch(() => {});
@@ -563,6 +501,7 @@ export default function TerminalPage() {
     if (res.resizeObserver) res.resizeObserver.disconnect();
     if (res.term) res.term.dispose();
     delete resources.current[activeTabId];
+    welcomeShown.current[activeTabId] = false;
     setStatuses((prev) => ({ ...prev, [activeTabId]: "connecting" }));
     setTimeout(() => {
       const el = containerRefs.current[activeTabId];

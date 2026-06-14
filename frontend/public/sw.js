@@ -1,6 +1,13 @@
-self.addEventListener("install", () => self.skipWaiting());
-self.addEventListener("activate", () => {
-  clients.claim();
-  self.registration.unregister();
-  caches.keys().then((keys) => keys.forEach((k) => caches.delete(k)));
+const CACHE = "elmodmen-v1";
+self.addEventListener("install", (e) => {
+  e.waitUntil(
+    caches.open(CACHE).then((c) =>
+      c.addAll(["/", "/manifest.json", "/icons/icon-192.png", "/icons/icon-512.png"])
+    )
+  );
+});
+self.addEventListener("fetch", (e) => {
+  e.respondWith(
+    caches.match(e.request).then((r) => r || fetch(e.request))
+  );
 });
