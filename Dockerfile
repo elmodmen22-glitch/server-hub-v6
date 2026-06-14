@@ -46,9 +46,9 @@ RUN rm -f /usr/lib/python3*/EXTERNALLY-MANAGED 2>/dev/null; \
     echo "EXTERNALLY-MANAGED files deleted"
 
 # System-wide pip.conf with break-system-packages (read by pip at /etc/pip.conf)
-RUN echo -e "[global]\nbreak-system-packages = true\nrequire-virtualenv = false" > /etc/pip.conf && \
+RUN printf "[global]\nbreak-system-packages = true\nrequire-virtualenv = false\n" > /etc/pip.conf && \
     mkdir -p /home/runner/.config/pip && \
-    echo -e "[global]\nbreak-system-packages = true" > /home/runner/.config/pip/pip.conf && \
+    printf "[global]\nbreak-system-packages = true\n" > /home/runner/.config/pip/pip.conf && \
     chmod -R 777 /home/runner/.config/pip
 
 # Upgrade pip to latest (supports --break-system-packages); || true avoids blocking build
